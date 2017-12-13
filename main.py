@@ -39,58 +39,77 @@ def dcAddErrorToList(error_column, row, error_to_add,df):
 
 ## WORKSPACE START ###
 # place the bight13 toxicity data in a location that the application can access
-#df = pd.ExcelFile('/Users/pauls/Documents/Projects/Bight18/Training/clean.xlsx')
-df1 = pd.read_excel('./station_occupation_test-drop-occupationtime.xls')
-df2 = pd.read_excel('./trawl_test.xls')
+df = pd.ExcelFile('./errors.xlsx')
+# df = pd.read_excel('./station_occupation_test-drop-occupationtime.xls')
 
-# # get sheet names
-# df_tab_names = df.sheet_names
-#
-# # create dictionary to hold dataframes
-# all_dataframes = collections.OrderedDict()
-#
-# # loop through each sheet
-# count = 0
-# for tab in df_tab_names:
-# 	tab_name = tab
-#     	### extract individual dataframes
-#     	tab = df.parse(tab)
-#         # if the sheet is blank skip to the next sheet
-# 	if tab.empty:
-# 		print('The application is skipping sheet "%s" because it is empty' % tab)
-# 		continue
-# 	# lowercase all column names
-# 	tab.columns = [x.lower() for x in tab.columns]
-#     	### and put into dictionary object
-#     	all_dataframes[count] = tab
-# 	### create tmp_row for tracking row numbers
-# 	all_dataframes[count]['tmp_row'] = all_dataframes[count].index
-# 	count = count + 1
+# get sheet names
+df_tab_names = df.sheet_names
+
+# create dictionary to hold dataframes
+all_dataframes = collections.OrderedDict()
+
+# loop through each sheet
+count = 0
+for tab in df_tab_names:
+	tab_name = tab
+    	### extract individual dataframes
+    	tab = df.parse(tab)
+        # if the sheet is blank skip to the next sheet
+	if tab.empty:
+		print('The application is skipping sheet "%s" because it is empty' % tab)
+		continue
+	# lowercase all column names
+	tab.columns = [x.lower() for x in tab.columns]
+    	### and put into dictionary object
+    	all_dataframes[count] = tab
+	### create tmp_row for tracking row numbers
+	all_dataframes[count]['tmp_row'] = all_dataframes[count].index
+	count = count + 1
 
 ### WORKSPACE END ###
-#
-# # ### SUMMARY TABLE START ###
 
+### SUMMARY TABLE START ###
+station_occ = all_dataframes[0]
+trawl = all_dataframes[1]
+
+### SUMMARY TABLE END ###
 # Here are the checks:
 #
 # 1. Check Trawl/StartDepth is no more 10% off of StationOccupation/OccupationDepth - warning only
-def percentDepth(df1, df2):
-	merge_stID = pd.merge(df2, df1, on=['StationID'], how='inner')
-	static_depth = merge_stID['StartDepth']
-	occupation_depth = merge_stID['OccupationDepth']
-	perc_result = abs(static_depth - occupation_depth)/occupation_depth*100
-	merge_stID['PercentageDepth'] = perc_result
-	#NaN is used as a placeholder for missing data consistently in pandas, consistency is good. I usually read/translate NaN as "missing". Also see the 'working with missing data' section in the docs.
-	merge_stID['PercentageDepth'] = np.where(merge_stID['PercentageDepth'] <= 10, merge_stID['PercentageDepth'], np.NaN)
-	print(merge_stID)
-	print("======================")
-	print("======================")
-	# 2. Check Trawl/EndDepth is no more than 10% off of StationOccupation/OccupationDepth - warning only
-	merge_stID = pd.merge(df2, df1, on=['StationID'], how='inner')
-	static_depth = merge_stID['EndDepth']
-	occupation_depth = merge_stID['OccupationDepth']
-	perc_result = abs(static_depth - occupation_depth)/occupation_depth*100
-	merge_stID['PercentageDepth'] = perc_result
-	merge_stID['PercentageDepth'] = np.where(merge_stID['PercentageDepth'] <= 10, merge_stID['PercentageDepth'], np.NaN)
-	print(merge_stID)
-percentDepth(df1,df2)
+# merging the StationID
+merge_trawl_sta = pd.merge(station_occ, trawl, on=['stationid'], how='inner')
+# print(merge_Trawl_Sta)
+# print(merge_Trawl_Sta.columns)
+trawlStart_depth = merge_trawl_sta['startdepth']
+occupation_depth = merge_trawl_sta['occupationdepth']
+occEnd_depth = merge_trawl_sta['enddepth']
+def calculatedPercentDepth(c1, c2, c3):
+	perc_result_start = abs(c1 - c2)/c2*100
+	merge_trawl_sta['start_percentagedepth'] = perc_result_start
+	# print(df1['start_percentagedepth'])
+	perc_result_end = abs(c3 - c2)/c2*100
+	merge_trawl_sta['end_percentagedepth'] = perc_result_end
+	return
+calculatedPercentDepth(trawlStart_depth, occupation_depth, occEnd_depth )
+# NaN is used as a placeholder for missing data consistently in pandas, consistency is good. I usually read/translate NaN as "missing". Also see the 'working with missing data' section in the docs.
+merge_trawl_sta['start_percentagedepth'] = np.where(merge_trawl_sta['start_percentagedepth'] <= 10, merge_trawl_sta['start_percentagedepth'], np.NaN)
+merge_trawl_sta['end_percentagedepth'] = np.where(merge_trawl_sta['end_percentagedepth'] <= 10, merge_trawl_sta['end_percentagedepth'], np.NaN)
+print(merge_trawl_sta)
+print('=================================')
+# print(merge_trawl_sta.columns)
+# merge_trawl_sta.groupby(columns)
+merge_trawl_sta.to_csv('output.csv', sep='\t', encoding='utf-8')
+
+# 	perc_result = abs(static_depth - occupation_depth)/occupation_depth*100
+# 	merge_stID['PercentageDepth'] = perc_result
+# 	#NaN is used as a placeholder for missing data consistently in pandas, consistency is good. I usually read/translate NaN as "missing". Also see the 'working with missing data' section in the docs.
+# 	merge_stID['PercentageDepth'] = np.where(merge_stID['PercentageDepth'] <= 10, merge_stID['PercentageDepth'], np.NaN)
+# 	print(merge_stID)
+# 	print("======================")
+# 	print("======================")
+# 	# 2. Check Trawl/EndDepth is no more than 10% off of StationOccupation/OccupationDepth - warning only
+# 	perc_result = abs(static_depth - occupation_depth)/occupation_depth*100
+# 	merge_stID['PercentageDepth'] = perc_result
+# 	merge_stID['PercentageDepth'] = np.where(merge_stID['PercentageDepth'] <= 10, merge_stID['PercentageDepth'], np.NaN)
+# 	print(merge_stID)
+# percentDepth(df1,df2)
